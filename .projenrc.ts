@@ -21,7 +21,7 @@ const project = new awscdk.AwsCdkConstructLibrary({
     yaml: true,
   },
   projenrcTs: true,
-  repositoryUrl: "https://github.com/berend/lambda-env-var.git",
+  repositoryUrl: "https://github.com/berend/cdk-lambda-env-var.git",
   keywords: ["aws", "aws-cdk", "lambda"],
   workflowNodeVersion: "24.x",
 

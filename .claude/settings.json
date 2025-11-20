@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npm test)",
-      "Bash(npx projen)"
+      "Bash(npx projen)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []
