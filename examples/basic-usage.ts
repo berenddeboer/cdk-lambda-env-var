@@ -16,7 +16,7 @@ const myFunction = new lambda.Function(stack, "MyFunction", {
 
 new SetLambdaEnvironmentVariables(stack, "SetEnvVars", {
   function: myFunction,
-  environmentVariables: {
+  environment: {
     API_KEY: "my-api-key",
     REGION: "us-east-1",
     DEBUG: "true",

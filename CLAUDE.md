@@ -10,7 +10,7 @@ This is an AWS CDK Construct Library that provides `SetLambdaEnvironmentVariable
 
 This project uses **Projen** to manage configuration. All build tools, dependencies, and scripts are generated from `.projenrc.ts`.
 
-**Critical:** Never manually edit `package.json`, `tsconfig.json`, GitHub workflows, or other generated files. Instead:
+**Critical:** Never manually edit `package.json`, `tsconfig.json`, `API.md`, GitHub workflows, or other generated files. Instead:
 1. Modify `.projenrc.ts`
 2. Run `npx projen` to regenerate all configuration files
 

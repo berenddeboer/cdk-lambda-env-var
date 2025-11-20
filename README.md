@@ -50,7 +50,7 @@ const myFunction = new lambda.Function(stack, "MyFunction", {
 // Set environment variables after deployment
 new SetLambdaEnvironmentVariables(stack, "SetEnvVars", {
   function: myFunction,
-  environmentVariables: {
+  environment: {
     API_ENDPOINT: "https://api.example.com",
     REGION: "us-east-1",
     DEBUG: "true",
@@ -84,7 +84,7 @@ const api = new apigateway.LambdaRestApi(this, "MyApi", {
 // This would normally create a circular dependency!
 new SetLambdaEnvironmentVariables(this, "SetApiUrl", {
   function: authFunction,
-  environmentVariables: {
+  environment: {
     API_URL: api.url,
   },
 });
@@ -111,7 +111,7 @@ This ensures that:
 | Property | Type | Description |
 |----------|------|-------------|
 | `function` | `lambda.IFunction` | The Lambda function to set environment variables on |
-| `environmentVariables` | `Record<string, string>` | Environment variables to set. These will be merged with existing variables |
+| `environment` | `Record<string, string>` | Environment variables to set. These will be merged with existing variables |
 
 ## Requirements
 

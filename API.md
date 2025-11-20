@@ -18,9 +18,9 @@ Lambda function.
 ```typescript
 new SetLambdaEnvironmentVariables(this, 'SetEnvVars', {
   function: myLambdaFunction,
-  environmentVariables: {
-    API_KEY: 'some-value',
-    REGION: 'us-east-1',
+  environment: {
+    CLOUDFRONT_DOMAIN: distribution.domainName,
+    CLOUDFRONT_URL: `https://${distribution.domainName}`,
   },
 });
 ```
