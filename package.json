@@ -1,5 +1,6 @@
 {
-  "name": "lambda-env-var",
+  "name": "cdk-lambda-env-var",
+  "description": "A CDK construct to set Lambda environment variables after deployment. This allows you to break those pesky circular dependency issues you will have for many common use-cases.",
   "repository": {
     "type": "git",
     "url": "https://github.com/berend/lambda-env-var.git"
@@ -38,7 +39,7 @@
     "@types/node": "^24.10.1",
     "@typescript-eslint/eslint-plugin": "^8",
     "@typescript-eslint/parser": "^8",
-    "aws-cdk-lib": "2.1.0",
+    "aws-cdk-lib": "2.170.0",
     "commit-and-tag-version": "^12",
     "constructs": "10.0.5",
     "eslint": "^9",
@@ -60,11 +61,14 @@
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
-    "aws-cdk-lib": "^2.1.0",
+    "aws-cdk-lib": "^2.170.0",
     "constructs": "^10.0.5"
   },
   "keywords": [
-    "cdk"
+    "aws",
+    "aws-cdk",
+    "cdk",
+    "lambda"
   ],
   "main": "lib/index.js",
   "license": "Apache-2.0",
