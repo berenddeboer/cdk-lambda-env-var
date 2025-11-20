@@ -24,10 +24,15 @@ const project = new awscdk.AwsCdkConstructLibrary({
   repositoryUrl: "git+https://github.com/berend/cdk-lambda-env-var.git",
   keywords: ["aws", "aws-cdk", "lambda"],
   workflowNodeVersion: "24.x",
+  devDeps: ["husky"],
 
   // deps: [],                /* Runtime dependencies of this module. */
   // description: undefined,  /* The description is just a string that helps people understand the purpose of the package. */
   // devDeps: [],             /* Build dependencies for this module. */
   // packageName: undefined,  /* The "name" in package.json. */
 })
+
+// Configure Husky
+project.packageTask.exec("husky install")
+
 project.synth()
