@@ -1,4 +1,5 @@
 import { awscdk, javascript } from "projen";
+import { TrailingComma } from "projen/lib/javascript";
 const project = new awscdk.AwsCdkConstructLibrary({
   author: "Berend de Boer",
   authorAddress: "berend@pobox.com",
@@ -8,6 +9,15 @@ const project = new awscdk.AwsCdkConstructLibrary({
   name: "lambda-env-var",
   packageManager: javascript.NodePackageManager.NPM,
   prettier: true,
+  prettierOptions: {
+    settings: {
+      trailingComma: TrailingComma.ES5,
+      semi: false,
+      singleQuote: false,
+      printWidth: 90,
+    },
+    yaml: true,
+  },
   projenrcTs: true,
   repositoryUrl: "https://github.com/berend/lambda-env-var.git",
 
