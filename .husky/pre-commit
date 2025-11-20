@@ -1,2 +1,2 @@
 npm run eslint
-npm test
+npm run build

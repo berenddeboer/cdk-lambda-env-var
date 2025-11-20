@@ -33,7 +33,4 @@ const project = new awscdk.AwsCdkConstructLibrary({
   // packageName: undefined,  /* The "name" in package.json. */
 })
 
-// Configure Husky
-project.packageTask.exec("husky install")
-
 project.synth()
