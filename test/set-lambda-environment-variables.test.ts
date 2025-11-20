@@ -21,7 +21,7 @@ describe("SetLambdaEnvironmentVariables", () => {
   test("construct creates necessary resources", () => {
     new SetLambdaEnvironmentVariables(stack, "SetEnvVars", {
       function: targetFunction,
-      environmentVariables: {
+      environment: {
         API_KEY: "test-key",
         REGION: "us-east-1",
       },
@@ -42,7 +42,7 @@ describe("SetLambdaEnvironmentVariables", () => {
   test("grants correct IAM permissions to custom resource handler", () => {
     new SetLambdaEnvironmentVariables(stack, "SetEnvVars", {
       function: targetFunction,
-      environmentVariables: {
+      environment: {
         TEST_VAR: "test-value",
       },
     })
@@ -73,7 +73,7 @@ describe("SetLambdaEnvironmentVariables", () => {
   test("custom resource receives correct properties", () => {
     new SetLambdaEnvironmentVariables(stack, "SetEnvVars", {
       function: targetFunction,
-      environmentVariables: {
+      environment: {
         KEY1: "value1",
         KEY2: "value2",
       },
@@ -98,7 +98,7 @@ describe("SetLambdaEnvironmentVariables", () => {
   test("handler code contains merge logic", () => {
     new SetLambdaEnvironmentVariables(stack, "SetEnvVars", {
       function: targetFunction,
-      environmentVariables: {
+      environment: {
         TEST_VAR: "test",
       },
     })
@@ -126,7 +126,7 @@ describe("SetLambdaEnvironmentVariables", () => {
   test("works with multiple environment variables", () => {
     new SetLambdaEnvironmentVariables(stack, "SetEnvVars", {
       function: targetFunction,
-      environmentVariables: {
+      environment: {
         VAR1: "value1",
         VAR2: "value2",
         VAR3: "value3",
@@ -149,7 +149,7 @@ describe("SetLambdaEnvironmentVariables", () => {
   test("works with empty environment variables object", () => {
     new SetLambdaEnvironmentVariables(stack, "SetEnvVars", {
       function: targetFunction,
-      environmentVariables: {},
+      environment: {},
     })
 
     const template = Template.fromStack(stack)
@@ -162,7 +162,7 @@ describe("SetLambdaEnvironmentVariables", () => {
   test("synthesizes without errors", () => {
     new SetLambdaEnvironmentVariables(stack, "SetEnvVars", {
       function: targetFunction,
-      environmentVariables: {
+      environment: {
         API_KEY: "test-key",
       },
     })

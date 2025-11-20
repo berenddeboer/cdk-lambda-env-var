@@ -153,15 +153,15 @@ const setLambdaEnvironmentVariablesProps: SetLambdaEnvironmentVariablesProps = {
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
-| <code><a href="#cdk-lambda-env-var.SetLambdaEnvironmentVariablesProps.property.environmentVariables">environmentVariables</a></code> | <code>{[ key: string ]: string}</code> | Environment variables to set on the Lambda function. |
+| <code><a href="#cdk-lambda-env-var.SetLambdaEnvironmentVariablesProps.property.environment">environment</a></code> | <code>{[ key: string ]: string}</code> | Environment variables to set on the Lambda function. |
 | <code><a href="#cdk-lambda-env-var.SetLambdaEnvironmentVariablesProps.property.function">function</a></code> | <code>aws-cdk-lib.aws_lambda.IFunction</code> | The Lambda function to set environment variables on. |
 
 ---
 
-##### `environmentVariables`<sup>Required</sup> <a name="environmentVariables" id="cdk-lambda-env-var.SetLambdaEnvironmentVariablesProps.property.environmentVariables"></a>
+##### `environment`<sup>Required</sup> <a name="environment" id="cdk-lambda-env-var.SetLambdaEnvironmentVariablesProps.property.environment"></a>
 
 ```typescript
-public readonly environmentVariables: {[ key: string ]: string};
+public readonly environment: {[ key: string ]: string};
 ```
 
 - *Type:* {[ key: string ]: string}

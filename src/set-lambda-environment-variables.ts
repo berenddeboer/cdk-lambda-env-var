@@ -15,7 +15,7 @@ export interface SetLambdaEnvironmentVariablesProps {
    * Environment variables to set on the Lambda function.
    * These will be merged with existing environment variables.
    */
-  readonly environmentVariables: Record<string, string>
+  readonly environment: Record<string, string>
 }
 
 /**
@@ -123,7 +123,7 @@ exports.handler = async (event) => {
       resourceType: "Custom::SetLambdaEnvVar",
       properties: {
         FunctionArn: props.function.functionArn,
-        EnvironmentVariables: props.environmentVariables,
+        EnvironmentVariables: props.environment,
       },
     })
   }
