@@ -186,8 +186,11 @@ export class SetLambdaEnvironmentVariables extends Construct {
     )
 
     // Create one custom resource per environment variable
+    // Chain them with dependencies to prevent concurrent Lambda updates
+    let previousResource: CustomResource | undefined
+
     Object.entries(props.environment).forEach(([key, value]) => {
-      new CustomResource(this, `CustomResource-${key}`, {
+      const resource = new CustomResource(this, `CustomResource-${key}`, {
         serviceToken: singleton.provider.serviceToken,
         resourceType: "Custom::SetLambdaEnvVar",
         properties: {
@@ -196,6 +199,13 @@ export class SetLambdaEnvironmentVariables extends Construct {
           Value: value,
         },
       })
+
+      // Chain resources to run sequentially
+      if (previousResource) {
+        resource.node.addDependency(previousResource)
+      }
+
+      previousResource = resource
     })
   }
 }
