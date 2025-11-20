@@ -1,4 +1,4 @@
-import { CustomResource, Duration } from "aws-cdk-lib"
+import { CustomResource, Duration, Stack } from "aws-cdk-lib"
 import * as iam from "aws-cdk-lib/aws-iam"
 import * as lambda from "aws-cdk-lib/aws-lambda"
 import * as logs from "aws-cdk-lib/aws-logs"
@@ -19,30 +19,18 @@ export interface SetLambdaEnvironmentVariablesProps {
 }
 
 /**
- * A construct that sets environment variables on a Lambda function after deployment.
- *
- * This construct uses a custom resource to update the Lambda function's environment
- * variables after the function has been deployed. The variables are merged with any
- * existing environment variables on the function.
- *
- * On deletion, the environment variables set by this construct are removed from the
- * Lambda function.
- *
- * @example
- *
- * new SetLambdaEnvironmentVariables(this, 'SetEnvVars', {
- *   function: myLambdaFunction,
- *   environmentVariables: {
- *     API_KEY: 'some-value',
- *     REGION: 'us-east-1',
- *   },
- * });
+ * Internal singleton construct that holds the shared provider and handler.
+ * This allows multiple SetLambdaEnvironmentVariables instances to share
+ * the same custom resource provider and handler Lambda.
  */
-export class SetLambdaEnvironmentVariables extends Construct {
-  constructor(scope: Construct, id: string, props: SetLambdaEnvironmentVariablesProps) {
+class SetLambdaEnvVarProviderSingleton extends Construct {
+  public readonly provider: cr.Provider
+  public readonly handler: lambda.IFunction
+
+  constructor(scope: Construct, id: string) {
     super(scope, id)
 
-    const onEventHandler = new lambda.Function(this, "Handler", {
+    this.handler = new lambda.Function(this, "Handler", {
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: "index.handler",
       code: lambda.Code.fromInline(`
@@ -102,8 +90,63 @@ exports.handler = async (event) => {
       logRetention: logs.RetentionDays.ONE_DAY,
     })
 
-    props.function.grantInvoke(onEventHandler)
-    onEventHandler.addToRolePolicy(
+    this.provider = new cr.Provider(this, "Provider", {
+      onEventHandler: this.handler,
+      logRetention: logs.RetentionDays.ONE_DAY,
+    })
+  }
+}
+
+/**
+ * A construct that sets environment variables on a Lambda function after deployment.
+ *
+ * This construct uses a custom resource to update the Lambda function's environment
+ * variables after the function has been deployed. The variables are merged with any
+ * existing environment variables on the function.
+ *
+ * On deletion, the environment variables set by this construct are removed from the
+ * Lambda function.
+ *
+ * @example
+ *
+ * new SetLambdaEnvironmentVariables(this, 'SetEnvVars', {
+ *   function: myLambdaFunction,
+ *   environmentVariables: {
+ *     API_KEY: 'some-value',
+ *     REGION: 'us-east-1',
+ *   },
+ * });
+ */
+export class SetLambdaEnvironmentVariables extends Construct {
+  /**
+   * Get or create the singleton provider for this stack.
+   * Multiple instances of SetLambdaEnvironmentVariables in the same stack
+   * will share the same provider and handler Lambda.
+   */
+  private static getOrCreateProvider(scope: Construct): SetLambdaEnvVarProviderSingleton {
+    const stack = Stack.of(scope)
+    const providerId = "SetLambdaEnvVarProviderSingleton"
+
+    let singleton = stack.node.tryFindChild(
+      providerId
+    ) as SetLambdaEnvVarProviderSingleton
+
+    if (!singleton) {
+      singleton = new SetLambdaEnvVarProviderSingleton(stack, providerId)
+    }
+
+    return singleton
+  }
+
+  constructor(scope: Construct, id: string, props: SetLambdaEnvironmentVariablesProps) {
+    super(scope, id)
+
+    // Get or create the shared singleton provider for this stack
+    const singleton = SetLambdaEnvironmentVariables.getOrCreateProvider(this)
+
+    // Grant permissions for this specific Lambda function
+    props.function.grantInvoke(singleton.handler)
+    singleton.handler.addToRolePolicy(
       new iam.PolicyStatement({
         actions: [
           "lambda:GetFunctionConfiguration",
@@ -113,13 +156,8 @@ exports.handler = async (event) => {
       })
     )
 
-    const provider = new cr.Provider(this, "Provider", {
-      onEventHandler,
-      logRetention: logs.RetentionDays.ONE_DAY,
-    })
-
     new CustomResource(this, "CustomResource", {
-      serviceToken: provider.serviceToken,
+      serviceToken: singleton.provider.serviceToken,
       resourceType: "Custom::SetLambdaEnvVar",
       properties: {
         FunctionArn: props.function.functionArn,

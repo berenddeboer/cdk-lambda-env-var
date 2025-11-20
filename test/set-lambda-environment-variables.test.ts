@@ -169,4 +169,57 @@ describe("SetLambdaEnvironmentVariables", () => {
 
     expect(() => app.synth()).not.toThrow()
   })
+
+  test("multiple usages share the same provider (singleton pattern)", () => {
+    // Create two target functions
+    const targetFunction2 = new lambda.Function(stack, "TargetFunction2", {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "index.handler",
+      code: lambda.Code.fromInline("exports.handler = async () => {};"),
+    })
+
+    // Create two SetLambdaEnvironmentVariables instances
+    new SetLambdaEnvironmentVariables(stack, "SetEnvVars1", {
+      function: targetFunction,
+      environment: {
+        API_KEY: "key1",
+      },
+    })
+
+    new SetLambdaEnvironmentVariables(stack, "SetEnvVars2", {
+      function: targetFunction2,
+      environment: {
+        REGION: "us-west-2",
+      },
+    })
+
+    const template = Template.fromStack(stack)
+
+    // With singleton: 2 target functions + 1 shared handler + 2 provider framework = 5 total
+    // Without singleton: 2 target functions + 2 handlers + 4 provider framework = 8 total
+    template.resourceCountIs("AWS::Lambda::Function", 5)
+
+    // Verify both custom resources exist with correct properties
+    template.resourceCountIs("Custom::SetLambdaEnvVar", 2)
+
+    // Verify the handler has permissions for both target functions
+    const iamPolicies = template.findResources("AWS::IAM::Policy")
+    const handlerPolicy = Object.values(iamPolicies).find((policy: any) =>
+      policy.Properties.PolicyDocument.Statement.some(
+        (stmt: any) =>
+          stmt.Action && stmt.Action.includes("lambda:UpdateFunctionConfiguration")
+      )
+    )
+
+    expect(handlerPolicy).toBeDefined()
+
+    // The handler should have statements for both target functions
+    const updateConfigStatements = (
+      handlerPolicy as any
+    ).Properties.PolicyDocument.Statement.filter((stmt: any) =>
+      stmt.Action?.includes("lambda:UpdateFunctionConfiguration")
+    )
+
+    expect(updateConfigStatements.length).toBeGreaterThanOrEqual(2)
+  })
 })
