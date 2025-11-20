@@ -83,6 +83,10 @@ describe("SetLambdaEnvironmentVariables", () => {
 
     const template = Template.fromStack(stack)
 
+    // Should create 2 custom resources (one per env var)
+    template.resourceCountIs("Custom::SetLambdaEnvVar", 2)
+
+    // Verify KEY1 custom resource
     template.hasResourceProperties("Custom::SetLambdaEnvVar", {
       FunctionArn: Match.objectLike({
         "Fn::GetAtt": Match.arrayEquals([
@@ -90,10 +94,20 @@ describe("SetLambdaEnvironmentVariables", () => {
           "Arn",
         ]),
       }),
-      EnvironmentVariables: {
-        KEY1: "value1",
-        KEY2: "value2",
-      },
+      Key: "KEY1",
+      Value: "value1",
+    })
+
+    // Verify KEY2 custom resource
+    template.hasResourceProperties("Custom::SetLambdaEnvVar", {
+      FunctionArn: Match.objectLike({
+        "Fn::GetAtt": Match.arrayEquals([
+          Match.stringLikeRegexp("TargetFunction.*"),
+          "Arn",
+        ]),
+      }),
+      Key: "KEY2",
+      Value: "value2",
     })
   })
 
@@ -138,13 +152,25 @@ describe("SetLambdaEnvironmentVariables", () => {
 
     const template = Template.fromStack(stack)
 
+    // Should create 4 custom resources (one per env var)
+    template.resourceCountIs("Custom::SetLambdaEnvVar", 4)
+
+    // Verify each has correct Key/Value
     template.hasResourceProperties("Custom::SetLambdaEnvVar", {
-      EnvironmentVariables: {
-        VAR1: "value1",
-        VAR2: "value2",
-        VAR3: "value3",
-        VAR4: "value4",
-      },
+      Key: "VAR1",
+      Value: "value1",
+    })
+    template.hasResourceProperties("Custom::SetLambdaEnvVar", {
+      Key: "VAR2",
+      Value: "value2",
+    })
+    template.hasResourceProperties("Custom::SetLambdaEnvVar", {
+      Key: "VAR3",
+      Value: "value3",
+    })
+    template.hasResourceProperties("Custom::SetLambdaEnvVar", {
+      Key: "VAR4",
+      Value: "value4",
     })
   })
 
@@ -156,9 +182,8 @@ describe("SetLambdaEnvironmentVariables", () => {
 
     const template = Template.fromStack(stack)
 
-    template.hasResourceProperties("Custom::SetLambdaEnvVar", {
-      EnvironmentVariables: {},
-    })
+    // With empty environment, no custom resources should be created
+    template.resourceCountIs("Custom::SetLambdaEnvVar", 0)
   })
 
   test("synthesizes without errors", () => {

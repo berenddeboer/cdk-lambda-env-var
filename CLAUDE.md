@@ -43,24 +43,29 @@ npm run package
 The construct uses a **Lambda-backed custom resource** (not `AwsCustomResource`) to handle merge/delete logic:
 
 1. **Custom Resource Handler Lambda**: Inline Node.js 22 function that uses AWS SDK v3 (`@aws-sdk/client-lambda`)
-2. **onCreate/onUpdate**: Fetches current env vars → merges with new vars → updates Lambda
-3. **onDelete**: Fetches current env vars → removes only the specified keys → updates Lambda
+2. **One custom resource per environment variable**: Each env var gets its own custom resource for independence
+3. **onCreate/onUpdate**: Fetches current env vars → merges single key/value → updates Lambda
+4. **onDelete**: Fetches current env vars → removes only the specified key → updates Lambda
 
-The handler is wrapped in a CDK `Provider` construct which manages the custom resource lifecycle.
+The handler is wrapped in a CDK `Provider` construct which manages the custom resource lifecycle. Multiple `SetLambdaEnvironmentVariables` instances in the same stack share a singleton provider to minimize resource overhead.
 
 ### Key Implementation Details
 
+- **One resource per variable**: The construct creates one `CustomResource` per environment variable (via `Object.entries(props.environment).forEach(...)`)
+- **Independent lifecycle**: Adding/removing an env var only affects that specific custom resource, not others
 - **Custom resource type**: `Custom::SetLambdaEnvVar` (not the default `AWS::CloudFormation::CustomResource`)
 - **IAM permissions**: Handler needs `lambda:GetFunctionConfiguration` and `lambda:UpdateFunctionConfiguration` on target Lambda
-- **Physical Resource ID**: Includes function name and env var keys to track what was set
+- **Physical Resource ID**: `SetEnvVars-${functionName}-${key}` - includes function name and single env var key
+- **Custom resource properties**: Each resource receives `FunctionArn`, `Key`, and `Value` (not a `EnvironmentVariables` object)
 
 ### Testing Strategy (`test/set-lambda-environment-variables.test.ts`)
 
 Tests use CDK assertions framework (`Template.fromStack()`):
-- Verify correct resource counts and types
+- Verify correct resource counts (one `Custom::SetLambdaEnvVar` per environment variable)
 - Check IAM policy statements
-- Validate custom resource properties
-- Inspect inline Lambda handler code contains merge logic
+- Validate each custom resource has correct `Key` and `Value` properties
+- Inspect inline Lambda handler code contains merge/delete logic for single key/value
+- Verify empty environment object creates 0 custom resources
 
 **Important**: Tests check for `Custom::SetLambdaEnvVar` resource type, not `AWS::CloudFormation::CustomResource`.
 

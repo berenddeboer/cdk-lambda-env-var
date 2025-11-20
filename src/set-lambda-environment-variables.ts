@@ -61,8 +61,8 @@ exports.handler = async (event) => {
   console.log('Event:', JSON.stringify(event, null, 2));
 
   const functionArn = event.ResourceProperties.FunctionArn;
-  const desiredEnvVars = event.ResourceProperties.EnvironmentVariables;
-  const envVarKeys = Object.keys(desiredEnvVars);
+  const key = event.ResourceProperties.Key;
+  const value = event.ResourceProperties.Value;
 
   try {
     const getConfigResponse = await lambda.send(
@@ -75,11 +75,11 @@ exports.handler = async (event) => {
 
     if (event.RequestType === 'Delete') {
       newEnvVars = { ...currentEnvVars };
-      envVarKeys.forEach(key => delete newEnvVars[key]);
-      console.log('Deleting env vars:', envVarKeys);
+      delete newEnvVars[key];
+      console.log('Deleting env var:', key);
     } else {
-      newEnvVars = { ...currentEnvVars, ...desiredEnvVars };
-      console.log('Merging env vars. Current:', Object.keys(currentEnvVars), 'Adding:', envVarKeys);
+      newEnvVars = { ...currentEnvVars, [key]: value };
+      console.log('Setting env var:', key, '=', value);
     }
 
     await lambda.send(
@@ -91,12 +91,12 @@ exports.handler = async (event) => {
       })
     );
 
-    console.log('Successfully updated environment variables');
+    console.log('Successfully updated environment variable');
 
     return {
-      PhysicalResourceId: \`SetEnvVars-\${functionArn.split(':').pop()}-\${envVarKeys.join('-')}\`,
+      PhysicalResourceId: key,
       Data: {
-        EnvVarKeys: envVarKeys.join(','),
+        Key: key,
       },
     };
   } catch (error) {
@@ -185,13 +185,17 @@ export class SetLambdaEnvironmentVariables extends Construct {
       })
     )
 
-    new CustomResource(this, "CustomResource", {
-      serviceToken: singleton.provider.serviceToken,
-      resourceType: "Custom::SetLambdaEnvVar",
-      properties: {
-        FunctionArn: props.function.functionArn,
-        EnvironmentVariables: props.environment,
-      },
+    // Create one custom resource per environment variable
+    Object.entries(props.environment).forEach(([key, value]) => {
+      new CustomResource(this, `CustomResource-${key}`, {
+        serviceToken: singleton.provider.serviceToken,
+        resourceType: "Custom::SetLambdaEnvVar",
+        properties: {
+          FunctionArn: props.function.functionArn,
+          Key: key,
+          Value: value,
+        },
+      })
     })
   }
 }
