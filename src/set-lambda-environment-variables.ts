@@ -1,4 +1,4 @@
-import { CustomResource, Duration, Stack } from "aws-cdk-lib"
+import { CustomResource, Duration, RemovalPolicy, Stack } from "aws-cdk-lib"
 import * as iam from "aws-cdk-lib/aws-iam"
 import * as lambda from "aws-cdk-lib/aws-lambda"
 import * as logs from "aws-cdk-lib/aws-logs"
@@ -16,6 +16,18 @@ export interface SetLambdaEnvironmentVariablesProps {
    * These will be merged with existing environment variables.
    */
   readonly environment: Record<string, string>
+
+  /**
+   * The number of days log events are kept in CloudWatch Logs for the
+   * custom resource handler Lambda and provider.
+   *
+   * A shared log group is created for all SetLambdaEnvironmentVariables
+   * instances in the same stack. If multiple instances specify different
+   * retention values, the first one to create the log group wins.
+   *
+   * @default logs.RetentionDays.ONE_WEEK
+   */
+  readonly logRetention?: logs.RetentionDays
 }
 
 /**
@@ -26,9 +38,16 @@ export interface SetLambdaEnvironmentVariablesProps {
 class SetLambdaEnvVarProviderSingleton extends Construct {
   public readonly provider: cr.Provider
   public readonly handler: lambda.IFunction
+  public readonly logGroup: logs.LogGroup
 
-  constructor(scope: Construct, id: string) {
+  constructor(scope: Construct, id: string, logRetention: logs.RetentionDays) {
     super(scope, id)
+
+    // Create shared log group for handler and provider
+    this.logGroup = new logs.LogGroup(this, "LogGroup", {
+      retention: logRetention,
+      removalPolicy: RemovalPolicy.DESTROY,
+    })
 
     this.handler = new lambda.Function(this, "Handler", {
       runtime: lambda.Runtime.NODEJS_22_X,
@@ -87,12 +106,12 @@ exports.handler = async (event) => {
 };
       `),
       timeout: Duration.minutes(5),
-      logRetention: logs.RetentionDays.ONE_DAY,
+      logGroup: this.logGroup,
     })
 
     this.provider = new cr.Provider(this, "Provider", {
       onEventHandler: this.handler,
-      logRetention: logs.RetentionDays.ONE_DAY,
+      logGroup: this.logGroup,
     })
   }
 }
@@ -122,8 +141,15 @@ export class SetLambdaEnvironmentVariables extends Construct {
    * Get or create the singleton provider for this stack.
    * Multiple instances of SetLambdaEnvironmentVariables in the same stack
    * will share the same provider and handler Lambda.
+   *
+   * If the singleton doesn't exist yet, it will be created with the specified
+   * log retention. If it already exists, the log retention parameter is ignored
+   * (the first instance to create the singleton determines the retention).
    */
-  private static getOrCreateProvider(scope: Construct): SetLambdaEnvVarProviderSingleton {
+  private static getOrCreateProvider(
+    scope: Construct,
+    logRetention: logs.RetentionDays
+  ): SetLambdaEnvVarProviderSingleton {
     const stack = Stack.of(scope)
     const providerId = "SetLambdaEnvVarProviderSingleton"
 
@@ -132,7 +158,7 @@ export class SetLambdaEnvironmentVariables extends Construct {
     ) as SetLambdaEnvVarProviderSingleton
 
     if (!singleton) {
-      singleton = new SetLambdaEnvVarProviderSingleton(stack, providerId)
+      singleton = new SetLambdaEnvVarProviderSingleton(stack, providerId, logRetention)
     }
 
     return singleton
@@ -142,7 +168,10 @@ export class SetLambdaEnvironmentVariables extends Construct {
     super(scope, id)
 
     // Get or create the shared singleton provider for this stack
-    const singleton = SetLambdaEnvironmentVariables.getOrCreateProvider(this)
+    const singleton = SetLambdaEnvironmentVariables.getOrCreateProvider(
+      this,
+      props.logRetention ?? logs.RetentionDays.ONE_WEEK
+    )
 
     // Grant permissions for this specific Lambda function
     props.function.grantInvoke(singleton.handler)

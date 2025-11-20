@@ -29,7 +29,9 @@ describe("SetLambdaEnvironmentVariables", () => {
 
     const template = Template.fromStack(stack)
 
-    template.resourceCountIs("AWS::Lambda::Function", 4)
+    // 1 target function + 1 handler + 1 provider framework = 3 total
+    // (Using logGroup instead of logRetention means fewer Lambda functions)
+    template.resourceCountIs("AWS::Lambda::Function", 3)
 
     template.hasResourceProperties("AWS::Lambda::Function", {
       Handler: "index.handler",
@@ -195,9 +197,10 @@ describe("SetLambdaEnvironmentVariables", () => {
 
     const template = Template.fromStack(stack)
 
-    // With singleton: 2 target functions + 1 shared handler + 2 provider framework = 5 total
-    // Without singleton: 2 target functions + 2 handlers + 4 provider framework = 8 total
-    template.resourceCountIs("AWS::Lambda::Function", 5)
+    // With singleton: 2 target functions + 1 shared handler + 1 provider framework = 4 total
+    // Without singleton: 2 target functions + 2 handlers + 2 provider framework = 6 total
+    // (Using logGroup instead of logRetention means fewer Lambda functions)
+    template.resourceCountIs("AWS::Lambda::Function", 4)
 
     // Verify both custom resources exist with correct properties
     template.resourceCountIs("Custom::SetLambdaEnvVar", 2)

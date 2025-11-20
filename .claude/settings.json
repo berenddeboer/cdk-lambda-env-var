@@ -4,7 +4,7 @@
       "Bash(npm test)",
       "Bash(npx projen)",
       "Bash(npm run build:*)",
-      "WebSearch",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

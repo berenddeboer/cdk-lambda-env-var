@@ -155,6 +155,7 @@ const setLambdaEnvironmentVariablesProps: SetLambdaEnvironmentVariablesProps = {
 | --- | --- | --- |
 | <code><a href="#cdk-lambda-env-var.SetLambdaEnvironmentVariablesProps.property.environment">environment</a></code> | <code>{[ key: string ]: string}</code> | Environment variables to set on the Lambda function. |
 | <code><a href="#cdk-lambda-env-var.SetLambdaEnvironmentVariablesProps.property.function">function</a></code> | <code>aws-cdk-lib.aws_lambda.IFunction</code> | The Lambda function to set environment variables on. |
+| <code><a href="#cdk-lambda-env-var.SetLambdaEnvironmentVariablesProps.property.logRetention">logRetention</a></code> | <code>aws-cdk-lib.aws_logs.RetentionDays</code> | The number of days log events are kept in CloudWatch Logs for the custom resource handler Lambda and provider. |
 
 ---
 
@@ -181,6 +182,23 @@ public readonly function: IFunction;
 - *Type:* aws-cdk-lib.aws_lambda.IFunction
 
 The Lambda function to set environment variables on.
+
+---
+
+##### `logRetention`<sup>Optional</sup> <a name="logRetention" id="cdk-lambda-env-var.SetLambdaEnvironmentVariablesProps.property.logRetention"></a>
+
+```typescript
+public readonly logRetention: RetentionDays;
+```
+
+- *Type:* aws-cdk-lib.aws_logs.RetentionDays
+- *Default:* logs.RetentionDays.ONE_WEEK
+
+The number of days log events are kept in CloudWatch Logs for the custom resource handler Lambda and provider.
+
+A shared log group is created for all SetLambdaEnvironmentVariables
+instances in the same stack. If multiple instances specify different
+retention values, the first one to create the log group wins.
 
 ---
 
