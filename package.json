@@ -3,7 +3,7 @@
   "description": "A CDK construct to set Lambda environment variables after deployment. This allows you to break those pesky circular dependency issues you will have for many common use-cases.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/berend/cdk-lambda-env-var.git"
+    "url": "https://github.com/berenddeboer/cdk-lambda-env-var"
   },
   "scripts": {
     "build": "npx projen build",
@@ -27,8 +27,7 @@
     "unbump": "npx projen unbump",
     "upgrade": "npx projen upgrade",
     "watch": "npx projen watch",
-    "projen": "npx projen",
-    "prepare": "husky"
+    "projen": "npx projen"
   },
   "author": {
     "name": "Berend de Boer",
