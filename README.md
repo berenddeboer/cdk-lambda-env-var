@@ -33,19 +33,19 @@ pnpm add cdk-lambda-env-var
 ### Basic Example
 
 ```typescript
-import { Stack, App } from "aws-cdk-lib";
-import * as lambda from "aws-cdk-lib/aws-lambda";
-import { SetLambdaEnvironmentVariables } from "cdk-lambda-env-var";
+import { Stack, App } from "aws-cdk-lib"
+import * as lambda from "aws-cdk-lib/aws-lambda"
+import { SetLambdaEnvironmentVariables } from "cdk-lambda-env-var"
 
-const app = new App();
-const stack = new Stack(app, "MyStack");
+const app = new App()
+const stack = new Stack(app, "MyStack")
 
 // Create your Lambda function
 const myFunction = new lambda.Function(stack, "MyFunction", {
   runtime: lambda.Runtime.NODEJS_22_X,
   handler: "index.handler",
   code: lambda.Code.fromAsset("lambda"),
-});
+})
 
 // Set environment variables after deployment
 new SetLambdaEnvironmentVariables(stack, "SetEnvVars", {
@@ -55,7 +55,7 @@ new SetLambdaEnvironmentVariables(stack, "SetEnvVars", {
     REGION: "us-east-1",
     DEBUG: "true",
   },
-});
+})
 ```
 
 ### Breaking Circular Dependencies
@@ -63,22 +63,22 @@ new SetLambdaEnvironmentVariables(stack, "SetEnvVars", {
 This construct is particularly useful when you have circular dependencies. For example, when a Lambda needs to know about a resource that depends on the Lambda itself:
 
 ```typescript
-import { Stack } from "aws-cdk-lib";
-import * as lambda from "aws-cdk-lib/aws-lambda";
-import * as apigateway from "aws-cdk-lib/aws-apigateway";
-import { SetLambdaEnvironmentVariables } from "cdk-lambda-env-var";
+import { Stack } from "aws-cdk-lib"
+import * as lambda from "aws-cdk-lib/aws-lambda"
+import * as apigateway from "aws-cdk-lib/aws-apigateway"
+import { SetLambdaEnvironmentVariables } from "cdk-lambda-env-var"
 
 // Lambda function that needs to know the API URL
 const authFunction = new lambda.Function(this, "AuthFunction", {
   runtime: lambda.Runtime.NODEJS_22_X,
   handler: "index.handler",
   code: lambda.Code.fromAsset("lambda"),
-});
+})
 
 // API Gateway that uses the Lambda
 const api = new apigateway.LambdaRestApi(this, "MyApi", {
   handler: authFunction,
-});
+})
 
 // Set the API URL as an environment variable on the Lambda
 // This would normally create a circular dependency!
@@ -87,7 +87,7 @@ new SetLambdaEnvironmentVariables(this, "SetApiUrl", {
   environment: {
     API_URL: api.url,
   },
-});
+})
 ```
 
 ## How It Works
