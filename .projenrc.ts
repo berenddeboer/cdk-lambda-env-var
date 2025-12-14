@@ -1,4 +1,4 @@
-import { awscdk, javascript } from "projen"
+import { awscdk, javascript, github } from "projen"
 import { TrailingComma } from "projen/lib/javascript"
 const project = new awscdk.AwsCdkConstructLibrary({
   author: "Berend de Boer",
@@ -27,6 +27,17 @@ const project = new awscdk.AwsCdkConstructLibrary({
   workflowNodeVersion: "24.x",
   npmTrustedPublishing: true,
   devDeps: ["husky"],
+  depsUpgradeOptions: {
+    workflowOptions: {
+      projenCredentials: github.GithubCredentials.fromPersonalAccessToken({
+        secret: "GITHUB_TOKEN",
+      }),
+      permissions: {
+        contents: github.workflows.JobPermission.WRITE,
+        pullRequests: github.workflows.JobPermission.WRITE,
+      },
+    },
+  },
 
   // deps: [],                /* Runtime dependencies of this module. */
   // description: undefined,  /* The description is just a string that helps people understand the purpose of the package. */
