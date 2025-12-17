@@ -39,6 +39,13 @@ describe("SetLambdaEnvironmentVariables", () => {
     })
 
     template.hasResourceProperties("Custom::SetLambdaEnvVar", Match.objectLike({}))
+
+    // Verify custom resource depends on the target Lambda function
+    const resources = template.findResources("Custom::SetLambdaEnvVar")
+    const customResource = Object.values(resources)[0] as { DependsOn?: string[] }
+    expect(
+      customResource.DependsOn?.some((dep) => dep.startsWith("TargetFunction"))
+    ).toBe(true)
   })
 
   test("grants scoped wildcard IAM permissions to custom resource handler", () => {
