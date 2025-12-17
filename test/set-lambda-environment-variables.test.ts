@@ -41,7 +41,7 @@ describe("SetLambdaEnvironmentVariables", () => {
     template.hasResourceProperties("Custom::SetLambdaEnvVar", Match.objectLike({}))
   })
 
-  test("grants correct IAM permissions to custom resource handler", () => {
+  test("grants scoped wildcard IAM permissions to custom resource handler", () => {
     new SetLambdaEnvironmentVariables(stack, "SetEnvVars", {
       function: targetFunction,
       environment: {
@@ -51,21 +51,30 @@ describe("SetLambdaEnvironmentVariables", () => {
 
     const template = Template.fromStack(stack)
 
+    // Handler should have stable wildcard permissions scoped to Lambda functions in the account
     template.hasResourceProperties("AWS::IAM::Policy", {
       PolicyDocument: {
         Statement: Match.arrayWith([
           Match.objectLike({
-            Action: Match.arrayWith([
+            Action: [
               "lambda:GetFunctionConfiguration",
               "lambda:UpdateFunctionConfiguration",
-            ]),
+            ],
             Effect: "Allow",
-            Resource: Match.objectLike({
-              "Fn::GetAtt": Match.arrayEquals([
-                Match.stringLikeRegexp("TargetFunction.*"),
-                "Arn",
-              ]),
-            }),
+            Resource: {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:",
+                  { Ref: "AWS::Partition" },
+                  ":lambda:",
+                  { Ref: "AWS::Region" },
+                  ":",
+                  { Ref: "AWS::AccountId" },
+                  ":function:*",
+                ],
+              ],
+            },
           }),
         ]),
       },
@@ -230,24 +239,33 @@ describe("SetLambdaEnvironmentVariables", () => {
     // Verify both custom resources exist with correct properties
     template.resourceCountIs("Custom::SetLambdaEnvVar", 2)
 
-    // Verify the handler has permissions for both target functions
-    const iamPolicies = template.findResources("AWS::IAM::Policy")
-    const handlerPolicy = Object.values(iamPolicies).find((policy: any) =>
-      policy.Properties.PolicyDocument.Statement.some(
-        (stmt: any) =>
-          stmt.Action && stmt.Action.includes("lambda:UpdateFunctionConfiguration")
-      )
-    )
-
-    expect(handlerPolicy).toBeDefined()
-
-    // The handler should have statements for both target functions
-    const updateConfigStatements = (
-      handlerPolicy as any
-    ).Properties.PolicyDocument.Statement.filter((stmt: any) =>
-      stmt.Action?.includes("lambda:UpdateFunctionConfiguration")
-    )
-
-    expect(updateConfigStatements.length).toBeGreaterThanOrEqual(2)
+    // Verify the handler has stable scoped wildcard permissions (not per-function)
+    template.hasResourceProperties("AWS::IAM::Policy", {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Action: [
+              "lambda:GetFunctionConfiguration",
+              "lambda:UpdateFunctionConfiguration",
+            ],
+            Effect: "Allow",
+            Resource: {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:",
+                  { Ref: "AWS::Partition" },
+                  ":lambda:",
+                  { Ref: "AWS::Region" },
+                  ":",
+                  { Ref: "AWS::AccountId" },
+                  ":function:*",
+                ],
+              ],
+            },
+          }),
+        ]),
+      },
+    })
   })
 })
