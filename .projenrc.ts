@@ -6,6 +6,7 @@ const project = new awscdk.AwsCdkConstructLibrary({
   constructsVersion: "10.3.0",
   cdkVersion: "2.170.0",
   defaultReleaseBranch: "main",
+  majorVersion: 1,
   jsiiVersion: "~5.9.0",
   name: "cdk-lambda-env-var",
   description:

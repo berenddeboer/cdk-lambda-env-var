@@ -55,7 +55,59 @@ class SetLambdaEnvVarProviderSingleton extends Construct {
       code: lambda.Code.fromInline(`
 const { LambdaClient, GetFunctionConfigurationCommand, UpdateFunctionConfigurationCommand } = require('@aws-sdk/client-lambda');
 
-const lambda = new LambdaClient();
+const lambdaClient = new LambdaClient();
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function updateWithRetry(functionArn, key, value, isDelete) {
+  const maxRetries = 10;
+  const maxDelay = 40000; // Cap at 40 seconds
+  let delay = 10000; // Start with 10 seconds
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const getConfigResponse = await lambdaClient.send(
+        new GetFunctionConfigurationCommand({ FunctionName: functionArn })
+      );
+
+      const currentEnvVars = getConfigResponse.Environment?.Variables || {};
+
+      let newEnvVars;
+
+      if (isDelete) {
+        newEnvVars = { ...currentEnvVars };
+        delete newEnvVars[key];
+        console.log('Deleting env var:', key);
+      } else {
+        newEnvVars = { ...currentEnvVars, [key]: value };
+        console.log('Setting env var:', key, '=', value);
+      }
+
+      await lambdaClient.send(
+        new UpdateFunctionConfigurationCommand({
+          FunctionName: functionArn,
+          Environment: {
+            Variables: newEnvVars,
+          },
+        })
+      );
+
+      console.log('Successfully updated environment variable');
+      return;
+    } catch (error) {
+      const isRetryable = error.name === 'ResourceConflictException' ||
+        error.message?.includes('An update is in progress');
+
+      if (isRetryable && attempt < maxRetries) {
+        console.log(\`Attempt \${attempt} failed due to concurrent update, retrying in \${delay}ms...\`);
+        await sleep(delay);
+        delay = Math.min(delay * 2, maxDelay); // Double the delay, but cap at 40s
+      } else {
+        throw error;
+      }
+    }
+  }
+}
 
 exports.handler = async (event) => {
   console.log('Event:', JSON.stringify(event, null, 2));
@@ -65,33 +117,7 @@ exports.handler = async (event) => {
   const value = event.ResourceProperties.Value;
 
   try {
-    const getConfigResponse = await lambda.send(
-      new GetFunctionConfigurationCommand({ FunctionName: functionArn })
-    );
-
-    const currentEnvVars = getConfigResponse.Environment?.Variables || {};
-
-    let newEnvVars;
-
-    if (event.RequestType === 'Delete') {
-      newEnvVars = { ...currentEnvVars };
-      delete newEnvVars[key];
-      console.log('Deleting env var:', key);
-    } else {
-      newEnvVars = { ...currentEnvVars, [key]: value };
-      console.log('Setting env var:', key, '=', value);
-    }
-
-    await lambda.send(
-      new UpdateFunctionConfigurationCommand({
-        FunctionName: functionArn,
-        Environment: {
-          Variables: newEnvVars,
-        },
-      })
-    );
-
-    console.log('Successfully updated environment variable');
+    await updateWithRetry(functionArn, key, value, event.RequestType === 'Delete');
 
     return {
       PhysicalResourceId: key,
@@ -105,7 +131,7 @@ exports.handler = async (event) => {
   }
 };
       `),
-      timeout: Duration.minutes(5),
+      timeout: Duration.minutes(7),
       logGroup: this.logGroup,
     })
 
