@@ -52,6 +52,19 @@ class SetLambdaEnvVarProviderSingleton extends Construct {
     this.handler = new lambda.Function(this, "Handler", {
       runtime: lambda.Runtime.NODEJS_24_X,
       handler: "index.handler",
+      // Use wildcard permissions else removing a
+      // SetLambdaEnvironmentVariables would lead to permission to
+      // remove the env var from a function to be dropped, before the
+      // handler has a change to delete it.
+      initialPolicy: [
+        new iam.PolicyStatement({
+          actions: [
+            "lambda:GetFunctionConfiguration",
+            "lambda:UpdateFunctionConfiguration",
+          ],
+          resources: ["*"],
+        }),
+      ],
       code: lambda.Code.fromInline(`
 const { LambdaClient, GetFunctionConfigurationCommand, UpdateFunctionConfigurationCommand } = require('@aws-sdk/client-lambda');
 
@@ -197,18 +210,6 @@ export class SetLambdaEnvironmentVariables extends Construct {
     const singleton = SetLambdaEnvironmentVariables.getOrCreateProvider(
       this,
       props.logRetention ?? logs.RetentionDays.ONE_WEEK
-    )
-
-    // Grant permissions for this specific Lambda function
-    props.function.grantInvoke(singleton.handler)
-    singleton.handler.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: [
-          "lambda:GetFunctionConfiguration",
-          "lambda:UpdateFunctionConfiguration",
-        ],
-        resources: [props.function.functionArn],
-      })
     )
 
     // Create one custom resource per environment variable
