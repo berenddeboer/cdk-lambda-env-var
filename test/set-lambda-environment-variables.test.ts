@@ -206,6 +206,149 @@ describe("SetLambdaEnvironmentVariables", () => {
     expect(() => app.synth()).not.toThrow()
   })
 
+  test("includes FunctionHash for CDK-defined Lambda functions", () => {
+    new SetLambdaEnvironmentVariables(stack, "SetEnvVars", {
+      function: targetFunction,
+      environment: {
+        NEW_VAR: "new-value",
+      },
+    })
+
+    const template = Template.fromStack(stack)
+
+    // Verify custom resource has FunctionHash property
+    template.hasResourceProperties("Custom::SetLambdaEnvVar", {
+      Key: "NEW_VAR",
+      Value: "new-value",
+      FunctionHash: Match.stringLikeRegexp("^[a-f0-9]{16}$"),
+    })
+  })
+
+  test("FunctionHash changes when Lambda environment changes", () => {
+    // Create two stacks with different Lambda environments
+    const stack1 = new Stack(app, "TestStack1")
+    const stack2 = new Stack(app, "TestStack2")
+
+    const fn1 = new lambda.Function(stack1, "Function", {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "index.handler",
+      code: lambda.Code.fromInline("exports.handler = async () => {};"),
+      environment: { VAR: "value1" },
+    })
+
+    const fn2 = new lambda.Function(stack2, "Function", {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "index.handler",
+      code: lambda.Code.fromInline("exports.handler = async () => {};"),
+      environment: { VAR: "value2" },
+    })
+
+    new SetLambdaEnvironmentVariables(stack1, "SetEnvVars", {
+      function: fn1,
+      environment: { KEY: "val" },
+    })
+
+    new SetLambdaEnvironmentVariables(stack2, "SetEnvVars", {
+      function: fn2,
+      environment: { KEY: "val" },
+    })
+
+    const template1 = Template.fromStack(stack1)
+    const template2 = Template.fromStack(stack2)
+
+    // Extract the FunctionHash values
+    const resources1 = template1.findResources("Custom::SetLambdaEnvVar")
+    const resources2 = template2.findResources("Custom::SetLambdaEnvVar")
+
+    const hash1 = Object.values(resources1)[0].Properties.FunctionHash
+    const hash2 = Object.values(resources2)[0].Properties.FunctionHash
+
+    // Hashes should be different because the Lambda environments are different
+    expect(hash1).not.toEqual(hash2)
+  })
+
+  test("FunctionHash changes when Lambda code changes", () => {
+    // Create two stacks with different Lambda code
+    const stack1 = new Stack(app, "TestStack1")
+    const stack2 = new Stack(app, "TestStack2")
+
+    const fn1 = new lambda.Function(stack1, "Function", {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "index.handler",
+      code: lambda.Code.fromInline("exports.handler = async () => { return 1; };"),
+    })
+
+    const fn2 = new lambda.Function(stack2, "Function", {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "index.handler",
+      code: lambda.Code.fromInline("exports.handler = async () => { return 2; };"),
+    })
+
+    new SetLambdaEnvironmentVariables(stack1, "SetEnvVars", {
+      function: fn1,
+      environment: { KEY: "val" },
+    })
+
+    new SetLambdaEnvironmentVariables(stack2, "SetEnvVars", {
+      function: fn2,
+      environment: { KEY: "val" },
+    })
+
+    const template1 = Template.fromStack(stack1)
+    const template2 = Template.fromStack(stack2)
+
+    const resources1 = template1.findResources("Custom::SetLambdaEnvVar")
+    const resources2 = template2.findResources("Custom::SetLambdaEnvVar")
+
+    const hash1 = Object.values(resources1)[0].Properties.FunctionHash
+    const hash2 = Object.values(resources2)[0].Properties.FunctionHash
+
+    // Hashes should be different because the Lambda code is different
+    expect(hash1).not.toEqual(hash2)
+  })
+
+  test("FunctionHash changes when Lambda memory changes", () => {
+    // Create two stacks with different Lambda memory
+    const stack1 = new Stack(app, "TestStack1")
+    const stack2 = new Stack(app, "TestStack2")
+
+    const fn1 = new lambda.Function(stack1, "Function", {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "index.handler",
+      code: lambda.Code.fromInline("exports.handler = async () => {};"),
+      memorySize: 128,
+    })
+
+    const fn2 = new lambda.Function(stack2, "Function", {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "index.handler",
+      code: lambda.Code.fromInline("exports.handler = async () => {};"),
+      memorySize: 256,
+    })
+
+    new SetLambdaEnvironmentVariables(stack1, "SetEnvVars", {
+      function: fn1,
+      environment: { KEY: "val" },
+    })
+
+    new SetLambdaEnvironmentVariables(stack2, "SetEnvVars", {
+      function: fn2,
+      environment: { KEY: "val" },
+    })
+
+    const template1 = Template.fromStack(stack1)
+    const template2 = Template.fromStack(stack2)
+
+    const resources1 = template1.findResources("Custom::SetLambdaEnvVar")
+    const resources2 = template2.findResources("Custom::SetLambdaEnvVar")
+
+    const hash1 = Object.values(resources1)[0].Properties.FunctionHash
+    const hash2 = Object.values(resources2)[0].Properties.FunctionHash
+
+    // Hashes should be different because the Lambda memory is different
+    expect(hash1).not.toEqual(hash2)
+  })
+
   test("multiple usages share the same provider (singleton pattern)", () => {
     // Create two target functions
     const targetFunction2 = new lambda.Function(stack, "TargetFunction2", {

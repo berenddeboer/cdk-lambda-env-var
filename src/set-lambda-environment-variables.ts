@@ -1,8 +1,10 @@
+import * as crypto from "crypto"
 import {
   Arn,
   ArnFormat,
   CustomResource,
   Duration,
+  Lazy,
   RemovalPolicy,
   Stack,
 } from "aws-cdk-lib"
@@ -184,6 +186,13 @@ exports.handler = async (event) => {
  * On deletion, the environment variables set by this construct are removed from the
  * Lambda function.
  *
+ * **Important:** When you modify any property of the target Lambda in CDK (environment,
+ * code, memory, timeout, etc.), CloudFormation will update the Lambda first (replacing
+ * its entire environment), and then this construct's custom resource runs to re-add
+ * its variables. This means the variables set by this construct will be **temporarily
+ * unavailable** during deployment. If your Lambda is invoked during this short window,
+ * these environment variables will be missing.
+ *
  * @example
  *
  * new SetLambdaEnvironmentVariables(this, 'SetEnvVars', {
@@ -231,6 +240,11 @@ export class SetLambdaEnvironmentVariables extends Construct {
       props.logRetention ?? logs.RetentionDays.ONE_WEEK
     )
 
+    // Compute hash of target Lambda's entire configuration to trigger updates when it changes.
+    // This ensures our env vars are re-applied after CloudFormation updates the Lambda
+    // and potentially wipes our previously-set variables.
+    const functionHash = this.computeFunctionHash(props.function)
+
     // Create one custom resource per environment variable
     // Chain them with dependencies to prevent concurrent Lambda updates
     let previousResource: CustomResource | undefined
@@ -243,6 +257,8 @@ export class SetLambdaEnvironmentVariables extends Construct {
           FunctionArn: props.function.functionArn,
           Key: key,
           Value: value,
+          // Include hash of Lambda's CDK config to trigger update when it changes
+          ...(functionHash && { FunctionHash: functionHash }),
         },
       })
 
@@ -252,6 +268,41 @@ export class SetLambdaEnvironmentVariables extends Construct {
       }
 
       previousResource = resource
+    })
+  }
+
+  /**
+   * Compute a hash of the Lambda function's entire CFN configuration.
+   * This is used to trigger custom resource updates when any Lambda property
+   * changes in CDK, ensuring our env vars are re-applied after CloudFormation
+   * updates the Lambda and potentially wipes our previously-set variables.
+   *
+   * Uses Lazy.string to defer computation to synthesis time when all
+   * tokens and lazy values have been resolved.
+   *
+   * Note: This only works for Lambda functions defined in CDK (with a CfnFunction
+   * as defaultChild). For imported functions, we cannot detect changes and will
+   * return undefined.
+   */
+  private computeFunctionHash(fn: lambda.IFunction): string | undefined {
+    const cfnFunction = fn.node.defaultChild as lambda.CfnFunction | undefined
+    if (!cfnFunction) {
+      return undefined
+    }
+
+    const stack = Stack.of(this)
+
+    // Use Lazy.string to defer hash computation to synthesis time
+    // when all tokens and lazy values have been resolved
+    return Lazy.string({
+      produce: () => {
+        // _toCloudFormation() returns the CFN JSON for this resource
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const cfnJson = (cfnFunction as any)._toCloudFormation()
+        const resolved = stack.resolve(cfnJson)
+        const json = JSON.stringify(resolved)
+        return crypto.createHash("sha256").update(json).digest("hex").slice(0, 16)
+      },
     })
   }
 }

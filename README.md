@@ -98,9 +98,27 @@ The construct uses a custom resource with a Lambda-backed handler to:
 2. **On Delete**: Fetches the current environment variables, removes only the variables set by this construct, and updates the Lambda configuration
 
 This ensures that:
+
 - Existing environment variables are preserved (merge behavior)
 - Stack updates properly update the environment variables
 - Stack deletion only removes the variables added by this construct
+
+## Important Behavior Note
+
+When you modify **any** property of the Lambda function in CDK (environment, code, memory, timeout, etc.) and deploy, CloudFormation updates the Lambda **before** this construct's custom resource runs. This means:
+
+1. CloudFormation replaces the Lambda's entire environment with what's defined in CDK
+2. Any variables set by `SetLambdaEnvironmentVariables` are temporarily removed
+3. The custom resource then runs and re-adds the variables
+
+**The variables set by this construct will be temporarily unavailable** between steps 1 and 3. If your Lambda is invoked during this window, it will not have access to these environment variables.
+
+This construct automatically detects changes to the target Lambda's configuration and triggers an update to re-apply its environment variables. However, the temporary unavailability window is unavoidable due to how CloudFormation processes updates.
+
+For most deployments this window is very short (seconds), but if you have critical environment variables that must always be present, consider:
+
+- Using a maintenance window for deployments
+- Implementing graceful degradation in your Lambda code for missing environment variables
 
 ## API Reference
 
@@ -108,9 +126,9 @@ This ensures that:
 
 #### Props
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `function` | `lambda.IFunction` | The Lambda function to set environment variables on |
+| Property      | Type                     | Description                                                                |
+| ------------- | ------------------------ | -------------------------------------------------------------------------- |
+| `function`    | `lambda.IFunction`       | The Lambda function to set environment variables on                        |
 | `environment` | `Record<string, string>` | Environment variables to set. These will be merged with existing variables |
 
 ## Requirements

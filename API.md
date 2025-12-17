@@ -13,6 +13,13 @@ existing environment variables on the function.
 On deletion, the environment variables set by this construct are removed from the
 Lambda function.
 
+**Important:** When you modify any property of the target Lambda in CDK (environment,
+code, memory, timeout, etc.), CloudFormation will update the Lambda first (replacing
+its entire environment), and then this construct's custom resource runs to re-add
+its variables. This means the variables set by this construct will be **temporarily
+unavailable** during deployment. If your Lambda is invoked during this short window,
+these environment variables will be missing.
+
 *Example*
 
 ```typescript
