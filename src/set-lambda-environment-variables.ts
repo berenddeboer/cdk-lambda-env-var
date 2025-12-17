@@ -262,6 +262,9 @@ export class SetLambdaEnvironmentVariables extends Construct {
         },
       })
 
+      // Ensure custom resource runs after the Lambda is updated
+      resource.node.addDependency(props.function)
+
       // Chain resources to run sequentially
       if (previousResource) {
         resource.node.addDependency(previousResource)

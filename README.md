@@ -8,6 +8,15 @@ Set Lambda environment variables after the Lambda function has been deployed. Th
 
 Now you can deploy the Lambda and the other resources first, and add environment variables later using this construct.
 
+**Caveat**: due to the nature of the Lambda control plane API it is
+not possible to set environment variables individually. This construct
+works fine for the first deploy. It's the second deploy you have to be
+careful: if you update something in your function, the behaviour is
+that first the environment variables (if any) of the function are
+applied, and the ones set with this construct will be removed. Only
+then, seconds to minutes after will the environment variables be
+reapplied.
+
 ## Installation
 
 ### npm
