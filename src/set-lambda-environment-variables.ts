@@ -50,7 +50,7 @@ class SetLambdaEnvVarProviderSingleton extends Construct {
     })
 
     this.handler = new lambda.Function(this, "Handler", {
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: "index.handler",
       code: lambda.Code.fromInline(`
 const { LambdaClient, GetFunctionConfigurationCommand, UpdateFunctionConfigurationCommand } = require('@aws-sdk/client-lambda');

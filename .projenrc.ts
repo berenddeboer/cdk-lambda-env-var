@@ -3,8 +3,8 @@ import { TrailingComma } from "projen/lib/javascript"
 const project = new awscdk.AwsCdkConstructLibrary({
   author: "Berend de Boer",
   authorAddress: "berend@pobox.com",
-  constructsVersion: "10.3.0",
-  cdkVersion: "2.170.0",
+  constructsVersion: "10.4.4",
+  cdkVersion: "2.232.2",
   defaultReleaseBranch: "main",
   majorVersion: 1,
   jsiiVersion: "~5.9.0",
