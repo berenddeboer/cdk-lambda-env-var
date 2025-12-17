@@ -41,7 +41,7 @@ describe("SetLambdaEnvironmentVariables", () => {
     template.hasResourceProperties("Custom::SetLambdaEnvVar", Match.objectLike({}))
   })
 
-  test("grants wildcard IAM permissions to custom resource handler", () => {
+  test("grants scoped wildcard IAM permissions to custom resource handler", () => {
     new SetLambdaEnvironmentVariables(stack, "SetEnvVars", {
       function: targetFunction,
       environment: {
@@ -51,7 +51,7 @@ describe("SetLambdaEnvironmentVariables", () => {
 
     const template = Template.fromStack(stack)
 
-    // Handler should have stable wildcard permissions for all Lambda functions
+    // Handler should have stable wildcard permissions scoped to Lambda functions in the account
     template.hasResourceProperties("AWS::IAM::Policy", {
       PolicyDocument: {
         Statement: Match.arrayWith([
@@ -61,7 +61,20 @@ describe("SetLambdaEnvironmentVariables", () => {
               "lambda:UpdateFunctionConfiguration",
             ],
             Effect: "Allow",
-            Resource: "*",
+            Resource: {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:",
+                  { Ref: "AWS::Partition" },
+                  ":lambda:",
+                  { Ref: "AWS::Region" },
+                  ":",
+                  { Ref: "AWS::AccountId" },
+                  ":function:*",
+                ],
+              ],
+            },
           }),
         ]),
       },
@@ -226,7 +239,7 @@ describe("SetLambdaEnvironmentVariables", () => {
     // Verify both custom resources exist with correct properties
     template.resourceCountIs("Custom::SetLambdaEnvVar", 2)
 
-    // Verify the handler has stable wildcard permissions (not per-function)
+    // Verify the handler has stable scoped wildcard permissions (not per-function)
     template.hasResourceProperties("AWS::IAM::Policy", {
       PolicyDocument: {
         Statement: Match.arrayWith([
@@ -236,7 +249,20 @@ describe("SetLambdaEnvironmentVariables", () => {
               "lambda:UpdateFunctionConfiguration",
             ],
             Effect: "Allow",
-            Resource: "*",
+            Resource: {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:",
+                  { Ref: "AWS::Partition" },
+                  ":lambda:",
+                  { Ref: "AWS::Region" },
+                  ":",
+                  { Ref: "AWS::AccountId" },
+                  ":function:*",
+                ],
+              ],
+            },
           }),
         ]),
       },

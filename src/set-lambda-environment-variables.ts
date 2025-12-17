@@ -1,4 +1,11 @@
-import { CustomResource, Duration, RemovalPolicy, Stack } from "aws-cdk-lib"
+import {
+  Arn,
+  ArnFormat,
+  CustomResource,
+  Duration,
+  RemovalPolicy,
+  Stack,
+} from "aws-cdk-lib"
 import * as iam from "aws-cdk-lib/aws-iam"
 import * as lambda from "aws-cdk-lib/aws-lambda"
 import * as logs from "aws-cdk-lib/aws-logs"
@@ -55,14 +62,26 @@ class SetLambdaEnvVarProviderSingleton extends Construct {
       // Use wildcard permissions else removing a
       // SetLambdaEnvironmentVariables would lead to permission to
       // remove the env var from a function to be dropped, before the
-      // handler has a change to delete it.
+      // handler has a chance to delete it.
+      // Also dynamically updating policies can easily make us run
+      // into IAM policy size limits.
       initialPolicy: [
         new iam.PolicyStatement({
           actions: [
             "lambda:GetFunctionConfiguration",
             "lambda:UpdateFunctionConfiguration",
           ],
-          resources: ["*"],
+          resources: [
+            Arn.format(
+              {
+                service: "lambda",
+                resource: "function",
+                resourceName: "*",
+                arnFormat: ArnFormat.COLON_RESOURCE_NAME,
+              },
+              Stack.of(scope)
+            ),
+          ],
         }),
       ],
       code: lambda.Code.fromInline(`
